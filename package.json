@@ -10,8 +10,25 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mantine/carousel": "^7.11.2",
+    "@mantine/core": "^7.11.2",
+    "@mantine/form": "^7.11.2",
+    "@mantine/hooks": "^7.11.2",
+    "@mantine/modals": "^7.11.2",
+    "@mantine/notifications": "^7.11.2",
+    "@mantine/nprogress": "^7.11.2",
+    "@mantine/spotlight": "^7.11.2",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "embla-carousel-react": "^8.1.6",
+    "lodash": "^4.17.21",
+    "postcss-preset-mantine": "^1.15.0",
+    "prop-types": "^15.8.1",
+    "query-string": "^9.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.25.0",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
