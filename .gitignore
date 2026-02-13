@@ -1,1 +1,22 @@
 node_modules
+
+# Build & cache
+dist
+.turbo
+.vite
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs & debug
+*.log
+pnpm-debug.log*
+
+# OS & editors
+.DS_Store
+
+# Test coverage
+coverage
