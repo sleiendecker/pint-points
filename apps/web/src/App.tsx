@@ -1,35 +1,63 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Link, Route, Routes, useLocation } from "react-router-dom";
+import { AppShell, Button, Container, Group, Title } from "@mantine/core";
+import Dashboard from "./pages/Dashboard";
+import Rules from "./pages/Rules";
+import Activities from "./pages/Activities";
+import Settings from "./pages/Settings";
 
-function App() {
-  const [count, setCount] = useState(0)
+const tabs = [
+  { to: "/", label: "Dashboard" },
+  { to: "/activities", label: "Activities" },
+  { to: "/rules", label: "Rules" },
+  { to: "/settings", label: "Settings" },
+];
+
+export default function App() {
+  const { pathname } = useLocation();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AppShell header={{ height: 60 }} padding="md">
+      <AppShell.Header>
+        <Container size="sm" h="100%">
+          <Group h="100%" gap="xl">
+            <Title
+              order={3}
+              component={Link}
+              to="/"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              🍺 pintpoints
+            </Title>
+            <Group gap="xs">
+              {tabs.map((tab) => {
+                const active = pathname === tab.to;
+                return (
+                  <Button
+                    key={tab.to}
+                    component={Link}
+                    to={tab.to}
+                    size="compact-sm"
+                    variant={active ? "light" : "subtle"}
+                    color={active ? "yellow" : "gray"}
+                  >
+                    {tab.label}
+                  </Button>
+                );
+              })}
+            </Group>
+          </Group>
+        </Container>
+      </AppShell.Header>
+      <AppShell.Main>
+        <Container size="sm" py="lg">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/activities" element={<Activities />} />
+            <Route path="/rules" element={<Rules />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
+  );
 }
-
-export default App

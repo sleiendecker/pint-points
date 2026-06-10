@@ -6,6 +6,9 @@ dist
 .vite
 *.tsbuildinfo
 
+# Local SQLite database
+apps/api/data/
+
 # Environment
 .env
 .env.local
@@ -17,6 +20,7 @@ pnpm-debug.log*
 
 # OS & editors
 .DS_Store
+.claude/settings.local.json
 
 # Test coverage
 coverage

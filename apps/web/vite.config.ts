@@ -1,7 +1,13 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-})
+  server: {
+    // Same-origin /api calls in dev get forwarded to the Hono server,
+    // so the browser never deals with CORS.
+    proxy: {
+      "/api": "http://localhost:8787",
+    },
+  },
+});
