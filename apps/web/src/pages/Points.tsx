@@ -15,6 +15,7 @@ import {
 import { modals } from "@mantine/modals";
 import { METRIC_LABELS, SPORT_METRICS, SPORT_TYPES } from "@pint-points/shared";
 import type { Metric, Rule, SportType } from "@pint-points/shared";
+import { TreatsSection } from "../components/TreatsSection";
 import { api } from "../lib/api";
 
 const spaced = (s: string) => s.replace(/([a-z])([A-Z])/g, "$1 $2");
@@ -34,7 +35,7 @@ const clampMetric = (sport: string, metric: Metric): Metric => {
 const describeRule = (rule: Rule) =>
   `${spaced(rule.sportType)}: ${rule.pointsPerUnit} ${rule.pointsPerUnit === 1 ? "pt" : "pts"} ${METRIC_LABELS[rule.metric]}`;
 
-export default function Rules() {
+export default function Points() {
   const queryClient = useQueryClient();
   const rules = useQuery({ queryKey: ["rules"], queryFn: api.rules });
   const sportStats = useQuery({ queryKey: ["sportStats"], queryFn: api.sportStats });
@@ -232,6 +233,10 @@ export default function Rules() {
       )}
 
       <EditRuleModal rule={editing} onClose={() => setEditing(null)} />
+
+      <Divider my="sm" />
+
+      <TreatsSection />
     </Stack>
   );
 }
