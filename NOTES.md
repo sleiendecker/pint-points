@@ -52,6 +52,12 @@ the treats table, never trusted from the client. One ledger entry per
 treat line ("2× 🍺 Pint"), copied by value, so editing or deleting a treat
 never rewrites history.
 
+**Auth is one shared password, not accounts.** Setting APP_PASSWORD wraps
+the whole API in HTTP basic auth (username `pint`, Hono's built-in
+middleware); unset means open, which is the local-dev mode. A login page
+and sessions would be more polish for zero extra safety at single-user
+scale. Revisit only if the app goes multi-user.
+
 **SQLite as a file.** No database server. `apps/api/data/pint-points.db` is
 created on first run (gitignored). Tables are created with
 `CREATE TABLE IF NOT EXISTS` at startup, which is fine while the schema is
