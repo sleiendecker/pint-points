@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { basicAuth } from "hono/basic-auth";
 import { desc, eq, sql } from "drizzle-orm";
 import { MAX_TREATS, SPORT_METRICS } from "@pint-points/shared";
 import type {
@@ -17,6 +18,15 @@ import { computePoints } from "./points.js";
 import { authorizeUrl, exchangeCode, fetchActivities, stravaConfigured } from "./strava.js";
 
 const app = new Hono().basePath("/api");
+
+// Single-user gate: one shared password, browser-native prompt. No
+// APP_PASSWORD means no auth, which is the local-dev mode. Set it in
+// production; without it the API is open to anyone who finds the URL.
+const appPassword = process.env.APP_PASSWORD;
+if (appPassword) {
+  app.use("*", basicAuth({ username: "pint", password: appPassword }));
+}
+
 const now = () => Math.floor(Date.now() / 1000);
 const webUrl = () => process.env.WEB_URL ?? "http://localhost:5173";
 
@@ -393,9 +403,12 @@ app.delete("/treats/:id", (c) => {
   return c.body(null, 204);
 });
 
-const port = 8787;
+const port = Number(process.env.PORT) || 8787;
 serve({ fetch: app.fetch, port });
 console.log(`pint-points api listening on http://localhost:${port}`);
+if (!appPassword) {
+  console.log("⚠ APP_PASSWORD not set. Auth is off; fine locally, not in production.");
+}
 if (!stravaConfigured()) {
   console.log("⚠ Strava credentials not set. Copy .env.example to .env to enable connect/sync.");
 }
