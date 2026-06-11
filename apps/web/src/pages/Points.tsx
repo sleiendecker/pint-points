@@ -209,7 +209,8 @@ export default function Points() {
             </Text>
             <Button
               size="compact-xs"
-              variant="light"
+              variant="filled"
+              color="yellow"
               loading={recalculate.isPending}
               onClick={confirmRecalculate}
             >
@@ -257,7 +258,7 @@ export default function Points() {
         </Text>
       )}
 
-      <EditRuleModal rule={editing} onClose={() => setEditing(null)} />
+      <EditRuleModal rule={editing} onClose={() => setEditing(null)} onSaved={confirmRecalculate} />
 
       <Divider my="sm" />
 
@@ -268,7 +269,7 @@ export default function Points() {
 
 const sportOptions = SPORT_TYPES.map((t) => ({ value: t, label: spaced(t) }));
 
-function EditRuleModal({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {
+function EditRuleModal({ rule, onClose, onSaved }: { rule: Rule | null; onClose: () => void; onSaved?: () => void }) {
   const queryClient = useQueryClient();
   const [sportType, setSportType] = useState<string>("Run");
   const [metric, setMetric] = useState<Metric>("miles");
@@ -290,6 +291,7 @@ function EditRuleModal({ rule, onClose }: { rule: Rule | null; onClose: () => vo
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rules"] });
       onClose();
+      onSaved?.();
     },
   });
 
@@ -328,7 +330,7 @@ function EditRuleModal({ rule, onClose }: { rule: Rule | null; onClose: () => vo
             allowDeselect={false}
           />
           <Text size="xs" c="dimmed">
-            Changes apply to future syncs. Points already earned keep their value.
+            You'll be offered a recalculate to apply this to past activities.
           </Text>
           {updateRule.isError && (
             <Text size="sm" c="red">
