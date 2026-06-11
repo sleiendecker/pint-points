@@ -11,6 +11,14 @@ import type {
   Treat,
 } from "@pint-points/shared";
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
@@ -18,7 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Request failed (${res.status})`);
+    throw new ApiError(body?.error ?? `Request failed (${res.status})`, res.status);
   }
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
@@ -34,10 +42,8 @@ export const api = {
   rules: () => request<Rule[]>("/api/rules"),
   createRule: (rule: { sportType: string; metric: Metric; pointsPerUnit: number }) =>
     request<Rule>("/api/rules", { method: "POST", body: JSON.stringify(rule) }),
-  updateRule: (
-    id: number,
-    rule: { sportType: string; metric: Metric; pointsPerUnit: number },
-  ) => request<Rule>(`/api/rules/${id}`, { method: "PATCH", body: JSON.stringify(rule) }),
+  updateRule: (id: number, rule: { sportType: string; metric: Metric; pointsPerUnit: number }) =>
+    request<Rule>(`/api/rules/${id}`, { method: "PATCH", body: JSON.stringify(rule) }),
   deleteRule: (id: number) => request<void>(`/api/rules/${id}`, { method: "DELETE" }),
   activities: () => request<Activity[]>("/api/activities"),
   ledger: () => request<LedgerEntry[]>("/api/ledger"),
@@ -52,4 +58,6 @@ export const api = {
   updateTreat: (id: number, treat: { name: string; pointCost: number }) =>
     request<Treat>(`/api/treats/${id}`, { method: "PATCH", body: JSON.stringify(treat) }),
   deleteTreat: (id: number) => request<void>(`/api/treats/${id}`, { method: "DELETE" }),
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
+  disconnectStrava: () => request<{ ok: boolean }>("/api/strava/disconnect", { method: "POST" }),
 };

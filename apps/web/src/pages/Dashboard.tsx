@@ -2,13 +2,16 @@ import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
+  Box,
   Button,
   Divider,
   Group,
   Modal,
   NumberInput,
+  Overlay,
   Paper,
   Select,
+  Skeleton,
   Stack,
   Text,
   Title,
@@ -42,86 +45,102 @@ export default function Dashboard() {
   const [historyVisible, setHistoryVisible] = useState(25);
 
   if (me.isPending) return <Text c="dimmed">Loading…</Text>;
-  if (me.isError) {
-    return <Text c="red">Can't reach the API. Is it running? ({me.error.message})</Text>;
-  }
+  if (me.isError) return null;
 
+  const connected = me.data.connected;
   const balance = me.data.balance;
   const pints = Math.floor(balance / PINT_COST);
 
   return (
-    <Stack gap="lg">
-      {!me.data.connected && (
-        <Paper withBorder p="md" style={{ borderColor: "var(--mantine-color-yellow-9)" }}>
-          <Group justify="space-between">
-            <div>
-              <Text fw={600} c="yellow.4">
-                Connect your Strava
-              </Text>
+    <Box pos="relative">
+      {!connected && (
+        <>
+          <Overlay backgroundOpacity={0.08} blur={4} zIndex={10} radius="md" />
+          <Modal
+            opened
+            onClose={() => {}}
+            withCloseButton={false}
+            centered
+            title="Connect your Strava"
+          >
+            <Stack>
               <Text size="sm" c="dimmed">
-                Activities sync from Strava and earn points via your rules.
+                Link your Strava account so your activities can start earning points.
               </Text>
-            </div>
-            <Button component="a" href="/api/strava/connect" color="#fc4c02" c="white">
-              Connect Strava
-            </Button>
-          </Group>
-        </Paper>
+              <Button component="a" href="/api/strava/connect" style={{ backgroundColor: "#fc4c02" }} c="white">
+                Connect Strava
+              </Button>
+            </Stack>
+          </Modal>
+        </>
       )}
+    <Stack gap="lg">
 
       <Paper withBorder p="lg">
-        <Text size="sm" fw={500} c="dimmed">
-          Balance
-        </Text>
-        <Group align="baseline" gap="sm" mt={4}>
-          <Text
-            fz={48}
-            fw={700}
-            style={{
-              fontVariantNumeric: "tabular-nums",
-              color: "light-dark(var(--mantine-color-yellow-8), var(--mantine-color-yellow-4))",
-            }}
-          >
-            {balance}
-          </Text>
-          <Text c="dimmed">
-            points · {pints} {pints === 1 ? "pint" : "pints"} earned 🍺
-          </Text>
-        </Group>
-        {me.data.startDate && (
-          <Text size="xs" c="dimmed" mt={4}>
-            Counting activities since{" "}
-            {new Date(me.data.startDate * 1000).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </Text>
-        )}
-        <Group mt="md">
-          <Button onClick={() => setShowRedeem(true)}>Redeem</Button>
-          {me.data.connected && (
-            <Button variant="default" loading={sync.isPending} onClick={() => sync.mutate()}>
-              Sync Strava
-            </Button>
-          )}
-          {me.data.lastSyncAt && (
-            <Text size="xs" c="dimmed">
-              Last synced {timeAgo(me.data.lastSyncAt)}
+        {connected ? (
+          <>
+            <Text size="sm" fw={500} c="dimmed">
+              Balance
             </Text>
-          )}
-        </Group>
-        {sync.isSuccess && (
-          <Text size="sm" c="teal.4" mt="sm">
-            Synced {sync.data.newActivities} new{" "}
-            {sync.data.newActivities === 1 ? "activity" : "activities"} (+
-            {sync.data.pointsEarned} pts)
-          </Text>
-        )}
-        {sync.isError && (
-          <Text size="sm" c="red" mt="sm">
-            {sync.error.message}
-          </Text>
+            <Group align="baseline" gap="sm" mt={4}>
+              <Text
+                fz={48}
+                fw={700}
+                style={{
+                  fontVariantNumeric: "tabular-nums",
+                  color: "light-dark(var(--mantine-color-yellow-8), var(--mantine-color-yellow-4))",
+                }}
+              >
+                {balance}
+              </Text>
+              <Text c="dimmed">
+                points · {pints} {pints === 1 ? "pint" : "pints"} earned 🍺
+              </Text>
+            </Group>
+            {me.data.startDate && (
+              <Text size="xs" c="dimmed" mt={4}>
+                Counting activities since{" "}
+                {new Date(me.data.startDate * 1000).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+            )}
+            <Group mt="md">
+              <Button onClick={() => setShowRedeem(true)}>Redeem</Button>
+              <Button variant="default" loading={sync.isPending} onClick={() => sync.mutate()}>
+                Sync Strava
+              </Button>
+              {me.data.lastSyncAt && (
+                <Text size="xs" c="dimmed">
+                  Last synced {timeAgo(me.data.lastSyncAt)}
+                </Text>
+              )}
+            </Group>
+            {sync.isSuccess && (
+              <Text size="sm" c="teal.4" mt="sm">
+                Synced {sync.data.newActivities} new{" "}
+                {sync.data.newActivities === 1 ? "activity" : "activities"} (+
+                {sync.data.pointsEarned} pts)
+              </Text>
+            )}
+            {sync.isError && (
+              <Text size="sm" c="red" mt="sm">
+                {sync.error.message}
+              </Text>
+            )}
+          </>
+        ) : (
+          <>
+            <Skeleton height={14} width={60} mb={8} />
+            <Skeleton height={52} width={120} mb={8} />
+            <Skeleton height={12} width={200} mb={16} />
+            <Group>
+              <Skeleton height={34} width={90} radius="md" />
+              <Skeleton height={34} width={110} radius="md" />
+            </Group>
+          </>
         )}
       </Paper>
 
@@ -132,7 +151,7 @@ export default function Dashboard() {
           <Title order={5} c="dimmed" tt="uppercase">
             Points history
           </Title>
-          {(ledger.data?.length ?? 0) > 25 && (
+          {!connected ? null : (ledger.data?.length ?? 0) > 25 && (
             <Select
               data={["25", "50", "100"]}
               value={historySize}
@@ -147,7 +166,22 @@ export default function Dashboard() {
             />
           )}
         </Group>
-        {ledger.data?.length ? (
+        {!connected ? (
+          <Paper withBorder>
+            {[1, 2, 3].map((i) => (
+              <Fragment key={i}>
+                {i > 1 && <Divider />}
+                <Group justify="space-between" px="md" py="sm">
+                  <Stack gap={4}>
+                    <Skeleton height={14} width={160} />
+                    <Skeleton height={11} width={60} />
+                  </Stack>
+                  <Skeleton height={22} width={50} radius="xl" />
+                </Group>
+              </Fragment>
+            ))}
+          </Paper>
+        ) : ledger.data?.length ? (
           <Paper withBorder>
             {ledger.data.slice(0, historyVisible).map((entry, i) => (
               <Fragment key={entry.id}>
@@ -187,12 +221,12 @@ export default function Dashboard() {
           </Paper>
         ) : (
           <Text size="sm" c="dimmed">
-            Nothing yet. Sync some activities or run <code>pnpm --filter api seed</code> for
-            demo data.
+            Nothing yet. Sync Strava to start earning.
           </Text>
         )}
       </div>
     </Stack>
+    </Box>
   );
 }
 

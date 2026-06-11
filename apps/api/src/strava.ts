@@ -32,10 +32,10 @@ export function authorizeUrl(): string {
   return `https://www.strava.com/oauth/authorize?${params}`;
 }
 
-interface TokenResponse {
+export interface TokenResponse {
   access_token: string;
   refresh_token: string;
-  expires_at: number; // unix seconds
+  expires_at: number;
   athlete?: { id: number; firstname: string; lastname: string; profile: string };
 }
 
@@ -51,24 +51,13 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
   return res.json() as Promise<TokenResponse>;
 }
 
-export async function exchangeCode(code: string): Promise<void> {
-  const token = await tokenRequest({ code, grant_type: "authorization_code" });
-  await db
-    .update(schema.users)
-    .set({
-      stravaAthleteId: token.athlete?.id,
-      firstname: token.athlete?.firstname,
-      lastname: token.athlete?.lastname,
-      profile: token.athlete?.profile,
-      accessToken: token.access_token,
-      refreshToken: token.refresh_token,
-      tokenExpiresAt: token.expires_at,
-    })
-    .where(eq(schema.users.id, 1));
+// Returns the raw token response so the caller can decide what to do with it.
+export async function exchangeCode(code: string): Promise<TokenResponse> {
+  return tokenRequest({ code, grant_type: "authorization_code" });
 }
 
-async function getFreshAccessToken(): Promise<string> {
-  const user = db.select().from(schema.users).where(eq(schema.users.id, 1)).get();
+export async function getFreshAccessToken(userId: number): Promise<string> {
+  const user = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
   if (!user?.refreshToken) throw new Error("Strava is not connected yet");
 
   const now = Math.floor(Date.now() / 1000);
@@ -80,14 +69,14 @@ async function getFreshAccessToken(): Promise<string> {
     refresh_token: user.refreshToken,
     grant_type: "refresh_token",
   });
-  await db
-    .update(schema.users)
+  db.update(schema.users)
     .set({
       accessToken: token.access_token,
       refreshToken: token.refresh_token,
       tokenExpiresAt: token.expires_at,
     })
-    .where(eq(schema.users.id, 1));
+    .where(eq(schema.users.id, userId))
+    .run();
   return token.access_token;
 }
 
@@ -95,19 +84,17 @@ export interface StravaActivity {
   id: number;
   name: string;
   sport_type: string;
-  distance: number; // meters
-  moving_time: number; // seconds
-  total_elevation_gain: number; // meters
-  start_date: string; // ISO
+  distance: number;
+  moving_time: number;
+  total_elevation_gain: number;
+  start_date: string;
 }
 
-/**
- * Fetch activities newer than `after` (unix seconds), oldest first.
- * Page cap = 3000 activities (30 requests), well inside Strava's
- * 200-requests-per-15-min limit even on a full-history first sync.
- */
-export async function fetchActivities(after: number): Promise<StravaActivity[]> {
-  const accessToken = await getFreshAccessToken();
+export async function fetchActivities(
+  userId: number,
+  after: number,
+): Promise<StravaActivity[]> {
+  const accessToken = await getFreshAccessToken(userId);
   const all: StravaActivity[] = [];
   for (let page = 1; page <= 30; page++) {
     const params = new URLSearchParams({
