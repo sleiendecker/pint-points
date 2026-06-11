@@ -4,5 +4,5 @@ buildCommand = "pnpm install --frozen-lockfile && pnpm --filter web build && pnp
 
 [deploy]
 startCommand = "node apps/api/dist/index.js"
-healthcheckPath = "/api/me"
+healthcheckPath = "/api/health"
 restartPolicyType = "on_failure"

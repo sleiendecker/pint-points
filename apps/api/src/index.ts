@@ -32,7 +32,11 @@ const SESSION_DURATION = 30 * 24 * 60 * 60; // 30 days
 // initiate or complete the login flow.
 app.use("*", async (c, next) => {
   const path = c.req.path;
-  if (path === "/api/strava/connect" || path === "/api/strava/callback") {
+  if (
+    path === "/api/strava/connect" ||
+    path === "/api/strava/callback" ||
+    path === "/api/health"
+  ) {
     return next();
   }
 
@@ -66,6 +70,10 @@ function getBalance(userId: number): number {
     .get();
   return Math.round((row?.balance ?? 0) * 10) / 10;
 }
+
+// ---- health ----
+
+app.get("/health", (c) => c.json({ ok: true }));
 
 // ---- profile ----
 
