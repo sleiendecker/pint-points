@@ -2,6 +2,7 @@ node_modules
 
 # Build & cache
 dist
+apps/api/dist
 .turbo
 .vite
 *.tsbuildinfo

@@ -5,7 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as schema from "./schema.js";
 
-const dataDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data");
+// DATA_DIR lets Railway (or any host) mount a persistent volume for the SQLite file.
+const dataDir =
+  process.env.DATA_DIR ??
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data");
 mkdirSync(dataDir, { recursive: true });
 
 const sqlite = new Database(path.join(dataDir, "pint-points.db"));

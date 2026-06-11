@@ -3,6 +3,10 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { MAX_TREATS, SPORT_METRICS } from "@pint-points/shared";
 import type {
   Me,
@@ -586,7 +590,46 @@ app.delete("/treats/:id", (c) => {
 });
 
 const port = Number(process.env.PORT) || 8787;
-serve({ fetch: app.fetch, port });
+
+// In production, serve the built frontend for all non-API requests.
+const isProd = process.env.NODE_ENV === "production";
+const webDist = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../web/dist");
+
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript",
+  ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".json": "application/json",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
+};
+
+async function serveStatic(reqPath: string): Promise<Response> {
+  const target = path.join(webDist, reqPath === "/" ? "index.html" : reqPath);
+  if (!target.startsWith(webDist)) return new Response("Forbidden", { status: 403 });
+  if (existsSync(target)) {
+    const data = await readFile(target);
+    const mime = MIME[path.extname(target)] ?? "application/octet-stream";
+    return new Response(data, { headers: { "Content-Type": mime } });
+  }
+  // SPA fallback: let React Router handle unknown paths.
+  const html = await readFile(path.join(webDist, "index.html"));
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+serve({
+  fetch: (req) => {
+    if (isProd && !new URL(req.url).pathname.startsWith("/api")) {
+      return serveStatic(new URL(req.url).pathname);
+    }
+    return app.fetch(req);
+  },
+  port,
+});
 console.log(`pint-points api listening on http://localhost:${port}`);
 if (!stravaConfigured()) {
   console.log("⚠ Strava credentials not set. Copy .env.example to .env to enable connect/sync.");
