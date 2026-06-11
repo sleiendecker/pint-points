@@ -109,6 +109,8 @@ export interface Me {
   firstname: string | null;
   lastname: string | null;
   profile: string | null;
+  /** Strava athlete id, for linking to the Strava profile page. */
+  stravaAthleteId: number | null;
   lastSyncAt: number | null;
   /** Unix seconds; activities before this never earn points. Set when Strava connects. */
   startDate: number | null;

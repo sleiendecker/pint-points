@@ -74,7 +74,14 @@ export default function Dashboard() {
           Balance
         </Text>
         <Group align="baseline" gap="sm" mt={4}>
-          <Text fz={48} fw={700} c="yellow.4" style={{ fontVariantNumeric: "tabular-nums" }}>
+          <Text
+            fz={48}
+            fw={700}
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              color: "light-dark(var(--mantine-color-yellow-8), var(--mantine-color-yellow-4))",
+            }}
+          >
             {balance}
           </Text>
           <Text c="dimmed">
