@@ -39,14 +39,9 @@ export default function App() {
         <Container size="sm" h="100%">
           <Group h="100%" justify="space-between">
             <Group gap="xl">
-              <Title
-                order={3}
-                component={Link}
-                to="/"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                🍺 pintpoints
-              </Title>
+              <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
+                <Title order={3}>🍺 pintpoints</Title>
+              </Link>
               <Group gap="xs">
                 {tabs.map((tab) => {
                   const active = pathname === tab.to;
