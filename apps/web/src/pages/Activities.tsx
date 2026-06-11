@@ -9,6 +9,7 @@ import {
   Select,
   Table,
   Text,
+  TextInput,
   UnstyledButton,
 } from "@mantine/core";
 import type { Activity } from "@pint-points/shared";
@@ -29,7 +30,6 @@ type SortDir = "asc" | "desc";
 
 const comparators: Record<SortField, (a: Activity, b: Activity) => number> = {
   name: (a, b) => a.name.localeCompare(b.name),
-  // ISO date strings sort correctly as plain strings
   date: (a, b) => a.startDate.localeCompare(b.startDate),
   points: (a, b) => a.pointsEarned - b.pointsEarned,
 };
@@ -66,12 +66,28 @@ export default function Activities() {
   });
   const [pageSize, setPageSize] = useState("25");
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sportFilter, setSportFilter] = useState<string | null>(null);
+
+  const sportTypes = useMemo(() => {
+    const types = [...new Set((activities.data ?? []).map((a) => a.sportType))].sort();
+    return types.map((t) => ({ value: t, label: spaced(t) }));
+  }, [activities.data]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (activities.data ?? []).filter((a) => {
+      if (sportFilter && a.sportType !== sportFilter) return false;
+      if (q && !a.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [activities.data, search, sportFilter]);
 
   const sorted = useMemo(() => {
-    const list = [...(activities.data ?? [])].sort(comparators[sort.field]);
+    const list = [...filtered].sort(comparators[sort.field]);
     if (sort.dir === "desc") list.reverse();
     return list;
-  }, [activities.data, sort]);
+  }, [filtered, sort]);
 
   const onSort = (field: SortField) => {
     setPage(1);
@@ -82,10 +98,20 @@ export default function Activities() {
     );
   };
 
+  const onSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
+
+  const onSportFilter = (val: string | null) => {
+    setSportFilter(val);
+    setPage(1);
+  };
+
   if (activities.isPending) return <Text c="dimmed">Loading…</Text>;
   if (activities.isError) return <Text c="red">{activities.error.message}</Text>;
 
-  if (!sorted.length) {
+  if (!(activities.data ?? []).length) {
     return (
       <Text size="sm" c="dimmed">
         No activities yet. Connect Strava and hit "Sync Strava" on the dashboard.
@@ -99,8 +125,31 @@ export default function Activities() {
 
   return (
     <Paper withBorder>
-      <Group justify="space-between" px="md" py="sm">
-        <Group gap="xs">
+      <Group justify="space-between" px="md" py="sm" wrap="nowrap">
+        <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+          <TextInput
+            placeholder="Search activities…"
+            value={search}
+            onChange={(e) => onSearch(e.currentTarget.value)}
+            size="xs"
+            w={180}
+          />
+          <Select
+            placeholder="All types"
+            data={sportTypes}
+            value={sportFilter}
+            onChange={onSportFilter}
+            clearable
+            size="xs"
+            w={150}
+          />
+        </Group>
+        <Group gap="xs" style={{ flexShrink: 0 }}>
+          <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+            {sorted.length === (activities.data ?? []).length
+              ? `${sorted.length} activities`
+              : `${sorted.length} of ${(activities.data ?? []).length}`}
+          </Text>
           <Select
             data={["25", "50", "100"]}
             value={pageSize}
@@ -110,16 +159,13 @@ export default function Activities() {
               setPage(1);
             }}
             allowDeselect={false}
-            w={80}
+            w={70}
             size="xs"
           />
-          <Text size="xs" c="dimmed">
-            {(page - 1) * size + 1}–{Math.min(page * size, sorted.length)} of {sorted.length}
-          </Text>
+          {totalPages > 1 && (
+            <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+          )}
         </Group>
-        {totalPages > 1 && (
-          <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
-        )}
       </Group>
       <Table verticalSpacing="sm" horizontalSpacing="md">
         <Table.Thead>
@@ -131,51 +177,61 @@ export default function Activities() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {pageItems.map((a) => (
-            <Table.Tr key={a.id}>
-              <Table.Td>
-                <Anchor
-                  href={`https://www.strava.com/activities/${a.id}`}
-                  target="_blank"
-                  rel="noopener"
-                  size="sm"
-                  fw={500}
-                  c="inherit"
-                  underline="hover"
-                >
-                  {a.name} ↗
-                </Anchor>
-                <Text size="xs" c="dimmed">
-                  {spaced(a.sportType)}
+          {pageItems.length ? (
+            pageItems.map((a) => (
+              <Table.Tr key={a.id}>
+                <Table.Td>
+                  <Anchor
+                    href={`https://www.strava.com/activities/${a.id}`}
+                    target="_blank"
+                    rel="noopener"
+                    size="sm"
+                    fw={500}
+                    c="inherit"
+                    underline="hover"
+                  >
+                    {a.name} ↗
+                  </Anchor>
+                  <Text size="xs" c="dimmed">
+                    {spaced(a.sportType)}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+                    {new Date(a.startDate).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" c="dimmed">
+                    {[
+                      a.distanceMeters > 0 &&
+                        `${(a.distanceMeters / METERS_PER_MILE).toFixed(1)} mi`,
+                      a.movingTimeSeconds > 0 && formatDuration(a.movingTimeSeconds),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                </Table.Td>
+                <Table.Td ta="right">
+                  <Badge variant="light" color={a.pointsEarned > 0 ? "teal" : "gray"}>
+                    +{a.pointsEarned}
+                  </Badge>
+                </Table.Td>
+              </Table.Tr>
+            ))
+          ) : (
+            <Table.Tr>
+              <Table.Td colSpan={4}>
+                <Text size="sm" c="dimmed" ta="center" py="md">
+                  No activities match your filters.
                 </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                  {new Date(a.startDate).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" c="dimmed">
-                  {[
-                    a.distanceMeters > 0 &&
-                      `${(a.distanceMeters / METERS_PER_MILE).toFixed(1)} mi`,
-                    a.movingTimeSeconds > 0 && formatDuration(a.movingTimeSeconds),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Text>
-              </Table.Td>
-              <Table.Td ta="right">
-                <Badge variant="light" color={a.pointsEarned > 0 ? "teal" : "gray"}>
-                  +{a.pointsEarned}
-                </Badge>
               </Table.Td>
             </Table.Tr>
-          ))}
+          )}
         </Table.Tbody>
       </Table>
     </Paper>
