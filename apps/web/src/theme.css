@@ -1,0 +1,13 @@
+/* Light mode: warm off-white canvas (pale lager, not hospital ceiling).
+   Paper/header keep --mantine-color-body white, so cards get depth. */
+[data-mantine-color-scheme="light"] body {
+  background-color: #f7f4ee;
+}
+
+/* Cross-fade duration for the light/dark toggle (View Transitions API,
+   see UserMenu). The browser fades a snapshot of the old page into the
+   new one — text included — so nothing transitions per-element. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 400ms;
+}

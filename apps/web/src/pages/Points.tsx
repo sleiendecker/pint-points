@@ -20,7 +20,7 @@ import { api } from "../lib/api";
 
 const spaced = (s: string) => s.replace(/([a-z])([A-Z])/g, "$1 $2");
 
-const sportOptions = SPORT_TYPES.map((t) => ({ value: t, label: spaced(t) }));
+
 const metricOptionsFor = (sport: string) =>
   (SPORT_METRICS[sport as SportType] ?? []).map((m) => ({
     value: m,
@@ -47,6 +47,18 @@ export default function Points() {
   const [editing, setEditing] = useState<Rule | null>(null);
   // Sport of the most recently added rule, for the recalculate nudge
   const [justAdded, setJustAdded] = useState<string | null>(null);
+  // Top sport types from actual activity data, surfaced as a group in the dropdown.
+  const topSports = (sportStats.data ?? [])
+    .filter((s) => s.sportType in SPORT_METRICS)
+    .slice(0, 3)
+    .map((s) => s.sportType);
+  const restSports = SPORT_TYPES.filter((t) => !topSports.includes(t));
+  const sportOptions = topSports.length > 0
+    ? [
+        { group: "Your activities", items: topSports.map((t) => ({ value: t, label: spaced(t) })) },
+        { group: "All sports", items: restSports.map((t) => ({ value: t, label: spaced(t) })) },
+      ]
+    : SPORT_TYPES.map((t) => ({ value: t, label: spaced(t) }));
 
   const createRule = useMutation({
     mutationFn: api.createRule,
@@ -63,9 +75,12 @@ export default function Points() {
     },
   });
 
-  // Sports you actually do that earn nothing, surfaced as rule suggestions
+  // Sports you actually do that earn nothing and have no rule yet, surfaced
+  // as rule suggestions. (Sports with a rule but stale zero-point activities
+  // are covered by the recalculate nudge instead.)
+  const ruledSports = new Set((rules.data ?? []).map((r) => r.sportType));
   const suggestions = (sportStats.data ?? []).filter(
-    (s) => s.zeroPoints > 0 && s.sportType in SPORT_METRICS,
+    (s) => s.zeroPoints > 0 && s.sportType in SPORT_METRICS && !ruledSports.has(s.sportType),
   );
   const nudgeStat = sportStats.data?.find((s) => s.sportType === justAdded && s.zeroPoints > 0);
 
@@ -119,20 +134,23 @@ export default function Points() {
           <Text size="sm" c="dimmed">
             Earning nothing right now:
           </Text>
-          {suggestions.map((s) => (
-            <Button
-              key={s.sportType}
-              size="compact-xs"
-              variant="light"
-              color="yellow"
-              onClick={() => {
-                setSportType(s.sportType);
-                setMetric(clampMetric(s.sportType, metric));
-              }}
-            >
-              {spaced(s.sportType)} ({s.zeroPoints})
-            </Button>
-          ))}
+          {suggestions.map((s) => {
+            const staged = sportType === s.sportType;
+            return (
+              <Button
+                key={s.sportType}
+                size="compact-xs"
+                variant={staged ? "filled" : "light"}
+                color="yellow"
+                onClick={() => {
+                  setSportType(s.sportType);
+                  setMetric(clampMetric(s.sportType, metric));
+                }}
+              >
+                {spaced(s.sportType)} ({s.zeroPoints})
+              </Button>
+            );
+          })}
         </Group>
       )}
 
@@ -143,7 +161,7 @@ export default function Points() {
             createRule.mutate({ sportType, metric, pointsPerUnit: Number(rate) });
           }}
         >
-          <Group align="flex-end">
+          <Group align="flex-end" wrap="wrap">
             <Select
               label="Activity"
               data={sportOptions}
@@ -154,7 +172,7 @@ export default function Points() {
                 setMetric(clampMetric(v, metric));
               }}
               allowDeselect={false}
-              w={180}
+              w={{ base: "100%", sm: 180 }}
             />
             <NumberInput label="Points" min={0.1} step={0.1} w={90} value={rate} onChange={setRate} />
             <Select
@@ -163,7 +181,8 @@ export default function Points() {
               value={metric}
               onChange={(v) => v && setMetric(v as Metric)}
               allowDeselect={false}
-              w={150}
+              w={{ base: "auto", sm: 150 }}
+              style={{ flex: 1 }}
             />
             <Button type="submit" loading={createRule.isPending} disabled={!(Number(rate) > 0)}>
               Add rule
@@ -240,6 +259,8 @@ export default function Points() {
     </Stack>
   );
 }
+
+const sportOptions = SPORT_TYPES.map((t) => ({ value: t, label: spaced(t) }));
 
 function EditRuleModal({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {
   const queryClient = useQueryClient();

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createTheme, MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import "@mantine/core/styles.css";
+import "./theme.css";
 import App from "./App.tsx";
 
 const theme = createTheme({

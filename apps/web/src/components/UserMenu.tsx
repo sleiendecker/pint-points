@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { flushSync } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   Avatar,
@@ -18,29 +19,36 @@ export function UserMenu() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const dark = colorScheme === "dark";
 
+  // Cross-fade the whole page during the scheme switch via the View
+  // Transitions API: the browser snapshots the old page and fades it into
+  // the new one as a single animation, so text and surfaces all fade
+  // together with nothing to clean up afterwards.
+  const toggleScheme = () => {
+    const next = dark ? "light" : "dark";
+    if (document.startViewTransition) {
+      document.startViewTransition(() => flushSync(() => setColorScheme(next)));
+    } else {
+      setColorScheme(next);
+    }
+  };
+
   const logout = useMutation({
     mutationFn: api.logout,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+    onSuccess: () => queryClient.clear(),
   });
 
-  const disconnect = useMutation({
-    mutationFn: api.disconnectStrava,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
-  });
-
-  const confirmDisconnect = () =>
+  const confirmLogout = () =>
     modals.openConfirmModal({
-      title: "Disconnect Strava?",
+      title: "Log out?",
       centered: true,
       children: (
         <Text size="sm">
-          Syncing will stop. Your points history stays intact. You can reconnect any time from
-          the dashboard.
+          You'll need to reconnect via Strava to log back in. Your points history stays intact.
         </Text>
       ),
-      labels: { confirm: "Disconnect", cancel: "Cancel" },
+      labels: { confirm: "Log out", cancel: "Cancel" },
       confirmProps: { color: "red" },
-      onConfirm: () => disconnect.mutate(),
+      onConfirm: () => logout.mutate(),
     });
 
   const name = me.data?.firstname;
@@ -83,16 +91,11 @@ export function UserMenu() {
           Settings
         </Menu.Item>
         <Menu.Divider />
-        <Menu.Item onClick={() => setColorScheme(dark ? "light" : "dark")}>
+        <Menu.Item onClick={toggleScheme}>
           {dark ? "Light mode" : "Dark mode"}
         </Menu.Item>
         <Menu.Divider />
-        {me.data?.connected && (
-          <Menu.Item color="orange" onClick={confirmDisconnect}>
-            Disconnect Strava
-          </Menu.Item>
-        )}
-        <Menu.Item color="red" onClick={() => logout.mutate()}>
+        <Menu.Item color="red" onClick={confirmLogout}>
           Log out
         </Menu.Item>
       </Menu.Dropdown>

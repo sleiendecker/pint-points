@@ -7,6 +7,7 @@ import {
   Pagination,
   Paper,
   Select,
+  Stack,
   Table,
   Text,
   TextInput,
@@ -40,16 +41,22 @@ function SortableTh({
   sort,
   onSort,
   ta,
+  visibleFrom,
 }: {
   label: string;
   field: SortField;
   sort: { field: SortField; dir: SortDir };
   onSort: (field: SortField) => void;
   ta?: "right";
+  visibleFrom?: string;
 }) {
   const active = sort.field === field;
   return (
-    <Table.Th ta={ta} w={field === "date" ? 120 : field === "points" ? 90 : undefined}>
+    <Table.Th
+      ta={ta}
+      w={field === "date" ? 120 : field === "points" ? 90 : undefined}
+      visibleFrom={visibleFrom}
+    >
       <UnstyledButton onClick={() => onSort(field)} fz="sm" fw={600}>
         {label} {active ? (sort.dir === "asc" ? "▲" : "▼") : ""}
       </UnstyledButton>
@@ -125,14 +132,14 @@ export default function Activities() {
 
   return (
     <Paper withBorder>
-      <Group justify="space-between" px="md" py="sm" wrap="nowrap">
-        <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+      <Stack gap="xs" px="md" py="sm">
+        <Group gap="xs">
           <TextInput
             placeholder="Search activities…"
             value={search}
             onChange={(e) => onSearch(e.currentTarget.value)}
             size="xs"
-            w={180}
+            style={{ flex: 1 }}
           />
           <Select
             placeholder="All types"
@@ -141,38 +148,41 @@ export default function Activities() {
             onChange={onSportFilter}
             clearable
             size="xs"
-            w={150}
+            w={{ base: 120, sm: 150 }}
           />
         </Group>
-        <Group gap="xs" style={{ flexShrink: 0 }}>
-          <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+        <Group justify="space-between">
+          <Text size="xs" c="dimmed">
             {sorted.length === (activities.data ?? []).length
               ? `${sorted.length} activities`
               : `${sorted.length} of ${(activities.data ?? []).length}`}
           </Text>
-          <Select
-            data={["25", "50", "100"]}
-            value={pageSize}
-            onChange={(v) => {
-              if (!v) return;
-              setPageSize(v);
-              setPage(1);
-            }}
-            allowDeselect={false}
-            w={70}
-            size="xs"
-          />
-          {totalPages > 1 && (
-            <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
-          )}
+          <Group gap="xs">
+            <Select
+              data={["25", "50", "100"]}
+              value={pageSize}
+              onChange={(v) => {
+                if (!v) return;
+                setPageSize(v);
+                setPage(1);
+              }}
+              allowDeselect={false}
+              w={70}
+              size="xs"
+            />
+            {totalPages > 1 && (
+              <Pagination total={totalPages} value={page} onChange={setPage} size="sm" />
+            )}
+          </Group>
         </Group>
-      </Group>
+      </Stack>
       <Table verticalSpacing="sm" horizontalSpacing="md">
         <Table.Thead>
           <Table.Tr>
             <SortableTh label="Activity" field="name" sort={sort} onSort={onSort} />
-            <SortableTh label="Date" field="date" sort={sort} onSort={onSort} />
-            <Table.Th>Details</Table.Th>
+            <Table.Th hiddenFrom="sm">Date</Table.Th>
+            <SortableTh label="Date" field="date" sort={sort} onSort={onSort} visibleFrom="sm" />
+            <Table.Th visibleFrom="sm">Details</Table.Th>
             <SortableTh label="Points" field="points" sort={sort} onSort={onSort} ta="right" />
           </Table.Tr>
         </Table.Thead>
@@ -196,7 +206,15 @@ export default function Activities() {
                     {spaced(a.sportType)}
                   </Text>
                 </Table.Td>
-                <Table.Td>
+                <Table.Td hiddenFrom="sm">
+                  <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+                    {new Date(a.startDate).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                </Table.Td>
+                <Table.Td visibleFrom="sm">
                   <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
                     {new Date(a.startDate).toLocaleDateString(undefined, {
                       month: "short",
@@ -205,7 +223,7 @@ export default function Activities() {
                     })}
                   </Text>
                 </Table.Td>
-                <Table.Td>
+                <Table.Td visibleFrom="sm">
                   <Text size="sm" c="dimmed">
                     {[
                       a.distanceMeters > 0 &&

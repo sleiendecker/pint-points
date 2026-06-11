@@ -58,6 +58,7 @@ export const api = {
   updateTreat: (id: number, treat: { name: string; pointCost: number }) =>
     request<Treat>(`/api/treats/${id}`, { method: "PATCH", body: JSON.stringify(treat) }),
   deleteTreat: (id: number) => request<void>(`/api/treats/${id}`, { method: "DELETE" }),
+  onboarding: (startDate: number) =>
+    request<SyncResult>("/api/onboarding", { method: "POST", body: JSON.stringify({ startDate }) }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
-  disconnectStrava: () => request<{ ok: boolean }>("/api/strava/disconnect", { method: "POST" }),
 };

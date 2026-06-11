@@ -182,12 +182,6 @@ app.get("/strava/callback", async (c) => {
     }
   }
 
-  // Default the points start date to "now" on first connect.
-  db.update(schema.users)
-    .set({ startDate: sql`coalesce(${schema.users.startDate}, unixepoch())` })
-    .where(eq(schema.users.id, user!.id))
-    .run();
-
   // Create a 30-day session.
   const sessionToken = crypto.randomUUID();
   db.insert(schema.sessions)
@@ -203,13 +197,21 @@ app.get("/strava/callback", async (c) => {
     maxAge: SESSION_DURATION,
   });
 
-  return c.redirect(webUrl());
+  // New user (no startDate yet): send to onboarding to pick a start date.
+  const isNewUser = user!.startDate === null;
+  return c.redirect(isNewUser ? `${webUrl()}/onboarding` : webUrl());
 });
 
 // ---- auth ----
 
 app.post("/auth/logout", (c) => {
+  const userId = c.get("userId");
   const token = getCookie(c, "session");
+  // Clear Strava tokens and session together — Strava is the login mechanism.
+  db.update(schema.users)
+    .set({ accessToken: null, refreshToken: null, tokenExpiresAt: null })
+    .where(eq(schema.users.id, userId))
+    .run();
   if (token) {
     db.delete(schema.sessions).where(eq(schema.sessions.token, token)).run();
   }
@@ -217,13 +219,22 @@ app.post("/auth/logout", (c) => {
   return c.json({ ok: true });
 });
 
-app.post("/strava/disconnect", (c) => {
+// ---- onboarding ----
+
+app.post("/onboarding", async (c) => {
   const userId = c.get("userId");
-  db.update(schema.users)
-    .set({ accessToken: null, refreshToken: null, tokenExpiresAt: null, lastSyncAt: null })
-    .where(eq(schema.users.id, userId))
-    .run();
-  return c.json({ ok: true });
+  const body = await c.req.json<{ startDate: number }>().catch(() => null);
+  const startDate = Number(body?.startDate);
+  if (!(startDate > 0)) return c.json({ error: "Invalid start date" }, 400);
+
+  db.update(schema.users).set({ startDate }).where(eq(schema.users.id, userId)).run();
+
+  // If they picked a past date, kick off an initial sync immediately.
+  const isToday = startDate >= now() - 86400;
+  if (!isToday && getUser(userId)?.refreshToken) {
+    return c.json(await performSync(userId));
+  }
+  return c.json({ newActivities: 0, pointsEarned: 0 } satisfies SyncResult);
 });
 
 // ---- sync ----
