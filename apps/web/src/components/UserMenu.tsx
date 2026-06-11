@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Avatar,
@@ -8,12 +8,39 @@ import {
   UnstyledButton,
   useMantineColorScheme,
 } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { api } from "../lib/api";
 
 export function UserMenu() {
+  const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const dark = colorScheme === "dark";
+
+  const logout = useMutation({
+    mutationFn: api.logout,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+
+  const disconnect = useMutation({
+    mutationFn: api.disconnectStrava,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+
+  const confirmDisconnect = () =>
+    modals.openConfirmModal({
+      title: "Disconnect Strava?",
+      centered: true,
+      children: (
+        <Text size="sm">
+          Syncing will stop. Your points history stays intact. You can reconnect any time from
+          the dashboard.
+        </Text>
+      ),
+      labels: { confirm: "Disconnect", cancel: "Cancel" },
+      confirmProps: { color: "red" },
+      onConfirm: () => disconnect.mutate(),
+    });
 
   const name = me.data?.firstname;
 
@@ -37,7 +64,7 @@ export function UserMenu() {
         {me.data?.connected ? (
           <Menu.Label>Connected via Strava</Menu.Label>
         ) : (
-          <Menu.Label>Not connected</Menu.Label>
+          <Menu.Label>Strava not connected</Menu.Label>
         )}
         {me.data?.stravaAthleteId != null && (
           <Menu.Item
@@ -55,6 +82,15 @@ export function UserMenu() {
         <Menu.Divider />
         <Menu.Item onClick={() => setColorScheme(dark ? "light" : "dark")}>
           {dark ? "Light mode" : "Dark mode"}
+        </Menu.Item>
+        <Menu.Divider />
+        {me.data?.connected && (
+          <Menu.Item color="orange" onClick={confirmDisconnect}>
+            Disconnect Strava
+          </Menu.Item>
+        )}
+        <Menu.Item color="red" onClick={() => logout.mutate()}>
+          Log out
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>

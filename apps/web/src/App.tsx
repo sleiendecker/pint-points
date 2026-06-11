@@ -1,9 +1,12 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
-import { AppShell, Button, Container, Group, Title } from "@mantine/core";
+import { AppShell, Button, Container, Group, Title, Text } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { api, ApiError } from "./lib/api";
 import Dashboard from "./pages/Dashboard";
 import Points from "./pages/Points";
 import Activities from "./pages/Activities";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
 import { UserMenu } from "./components/UserMenu";
 
 const tabs = [
@@ -14,6 +17,21 @@ const tabs = [
 
 export default function App() {
   const { pathname } = useLocation();
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me, retry: false });
+
+  // Unauthenticated: show login page (no app shell).
+  if (me.error instanceof ApiError && me.error.status === 401) {
+    return <Login />;
+  }
+
+  // API down or other error.
+  if (me.isError) {
+    return (
+      <Container size="sm" py="xl">
+        <Text c="red">Can't reach the API. Is it running? ({me.error.message})</Text>
+      </Container>
+    );
+  }
 
   return (
     <AppShell header={{ height: 60 }} padding="md">
