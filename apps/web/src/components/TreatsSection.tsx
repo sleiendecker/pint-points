@@ -73,7 +73,7 @@ export function TreatsSection() {
             <Group align="flex-end">
               <TextInput
                 label="Treat"
-                placeholder="🍔 Burger"
+                placeholder="Enter treat"
                 value={name}
                 onChange={(e) => setName(e.currentTarget.value)}
                 w={180}

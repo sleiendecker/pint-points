@@ -4,12 +4,12 @@ import Dashboard from "./pages/Dashboard";
 import Points from "./pages/Points";
 import Activities from "./pages/Activities";
 import Settings from "./pages/Settings";
+import { UserMenu } from "./components/UserMenu";
 
 const tabs = [
   { to: "/", label: "Dashboard" },
   { to: "/activities", label: "Activities" },
   { to: "/points", label: "Points" },
-  { to: "/settings", label: "Settings" },
 ];
 
 export default function App() {
@@ -19,32 +19,35 @@ export default function App() {
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
         <Container size="sm" h="100%">
-          <Group h="100%" gap="xl">
-            <Title
-              order={3}
-              component={Link}
-              to="/"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              🍺 pintpoints
-            </Title>
-            <Group gap="xs">
-              {tabs.map((tab) => {
-                const active = pathname === tab.to;
-                return (
-                  <Button
-                    key={tab.to}
-                    component={Link}
-                    to={tab.to}
-                    size="compact-sm"
-                    variant={active ? "light" : "subtle"}
-                    color={active ? "yellow" : "gray"}
-                  >
-                    {tab.label}
-                  </Button>
-                );
-              })}
+          <Group h="100%" justify="space-between">
+            <Group gap="xl">
+              <Title
+                order={3}
+                component={Link}
+                to="/"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                🍺 pintpoints
+              </Title>
+              <Group gap="xs">
+                {tabs.map((tab) => {
+                  const active = pathname === tab.to;
+                  return (
+                    <Button
+                      key={tab.to}
+                      component={Link}
+                      to={tab.to}
+                      size="compact-sm"
+                      variant={active ? "light" : "subtle"}
+                      color={active ? "yellow" : "gray"}
+                    >
+                      {tab.label}
+                    </Button>
+                  );
+                })}
+              </Group>
             </Group>
+            <UserMenu />
           </Group>
         </Container>
       </AppShell.Header>

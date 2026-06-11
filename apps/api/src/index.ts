@@ -51,6 +51,7 @@ app.get("/me", (c) => {
     firstname: user?.firstname ?? null,
     lastname: user?.lastname ?? null,
     profile: user?.profile ?? null,
+    stravaAthleteId: user?.stravaAthleteId ?? null,
     lastSyncAt: user?.lastSyncAt ?? null,
     startDate: user?.startDate ?? null,
     balance: getBalance(),
