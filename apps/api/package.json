@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsup src/index.ts --format esm --target node18 --out-dir dist --no-splitting",
     "start": "node dist/index.js",
     "seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit"
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^24.10.1",
+    "tsup": "^8.5.1",
     "tsx": "^4.20.0",
     "typescript": "~5.9.3"
   }
