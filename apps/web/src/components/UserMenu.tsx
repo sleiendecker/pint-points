@@ -4,6 +4,7 @@ import {
   Avatar,
   Group,
   Menu,
+  Skeleton,
   Text,
   UnstyledButton,
   useMantineColorScheme,
@@ -49,13 +50,15 @@ export function UserMenu() {
       <Menu.Target>
         <UnstyledButton aria-label="User menu">
           <Group gap="xs">
-            <Avatar src={me.data?.profile} radius="xl" size={30} alt={name ?? "User"}>
-              🍺
-            </Avatar>
-            {name && (
-              <Text size="sm" fw={500} visibleFrom="xs">
-                {name}
-              </Text>
+            <Avatar src={me.data?.connected ? me.data.profile : null} radius="xl" size={30} alt={name ?? "User"} />
+            {me.data?.connected ? (
+              name && (
+                <Text size="sm" fw={500} visibleFrom="xs">
+                  {name}
+                </Text>
+              )
+            ) : (
+              <Skeleton height={12} width={56} radius="xl" visibleFrom="xs" />
             )}
           </Group>
         </UnstyledButton>
