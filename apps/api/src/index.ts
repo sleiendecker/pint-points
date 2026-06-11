@@ -422,6 +422,12 @@ app.post("/rules", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json<RuleInput>();
   if (!validRule(body)) return c.json({ error: "Invalid rule" }, 400);
+  const existing = db
+    .select()
+    .from(schema.rules)
+    .where(and(eq(schema.rules.userId, userId), eq(schema.rules.sportType, body.sportType)))
+    .get();
+  if (existing) return c.json({ error: "A rule for this sport already exists" }, 409);
   const rule = db
     .insert(schema.rules)
     .values({

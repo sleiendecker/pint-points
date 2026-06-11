@@ -45,44 +45,51 @@ export default function Points() {
   // number | string because NumberInput emits "" when cleared; Number()-ed on submit
   const [rate, setRate] = useState<number | string>(1);
   const [editing, setEditing] = useState<Rule | null>(null);
-  // Sport of the most recently added rule, for the recalculate nudge
-  const [justAdded, setJustAdded] = useState<string | null>(null);
+
+  // Sports that already have a rule — excluded from the add form dropdown.
+  const ruledSports = new Set((rules.data ?? []).map((r) => r.sportType));
+
   // Top sport types from actual activity data, surfaced as a group in the dropdown.
+  // Exclude sports that already have a rule.
   const topSports = (sportStats.data ?? [])
-    .filter((s) => s.sportType in SPORT_METRICS)
+    .filter((s) => s.sportType in SPORT_METRICS && !ruledSports.has(s.sportType))
     .slice(0, 3)
     .map((s) => s.sportType);
-  const restSports = SPORT_TYPES.filter((t) => !topSports.includes(t));
+  const restSports = SPORT_TYPES.filter((t) => !topSports.includes(t) && !ruledSports.has(t));
   const sportOptions = topSports.length > 0
     ? [
         { group: "Your activities", items: topSports.map((t) => ({ value: t, label: spaced(t) })) },
         { group: "All sports", items: restSports.map((t) => ({ value: t, label: spaced(t) })) },
       ]
-    : SPORT_TYPES.map((t) => ({ value: t, label: spaced(t) }));
+    : restSports.map((t) => ({ value: t, label: spaced(t) }));
 
   const createRule = useMutation({
     mutationFn: api.createRule,
     onSuccess: (rule) => {
-      setJustAdded(rule.sportType);
       queryClient.invalidateQueries({ queryKey: ["rules"] });
+      // Advance to the next available sport so the form is ready for another rule.
+      const nextSport = SPORT_TYPES.find(
+        (t) => t in SPORT_METRICS && t !== rule.sportType && !ruledSports.has(t),
+      );
+      if (nextSport) {
+        setSportType(nextSport);
+        setMetric(clampMetric(nextSport, metric));
+      }
     },
   });
   const recalculate = useMutation({
     mutationFn: api.recalculate,
-    onSuccess: () => {
-      setJustAdded(null);
-      queryClient.invalidateQueries();
-    },
+    onSuccess: () => queryClient.invalidateQueries(),
   });
 
-  // Sports you actually do that earn nothing and have no rule yet, surfaced
-  // as rule suggestions. (Sports with a rule but stale zero-point activities
-  // are covered by the recalculate nudge instead.)
-  const ruledSports = new Set((rules.data ?? []).map((r) => r.sportType));
+  // Sports you actually do that earn nothing and have no rule yet.
   const suggestions = (sportStats.data ?? []).filter(
     (s) => s.zeroPoints > 0 && s.sportType in SPORT_METRICS && !ruledSports.has(s.sportType),
   );
-  const nudgeStat = sportStats.data?.find((s) => s.sportType === justAdded && s.zeroPoints > 0);
+  // Activities with zero points for sports that DO have a rule — need a recalculate.
+  const strandedCount = (sportStats.data ?? [])
+    .filter((s) => s.zeroPoints > 0 && ruledSports.has(s.sportType))
+    .reduce((sum, s) => sum + s.zeroPoints, 0);
 
   const confirmRecalculate = async () => {
     const preview = await api.recalculatePreview();
@@ -124,8 +131,8 @@ export default function Points() {
       <div>
         <Title order={4}>Earning rules</Title>
         <Text size="sm" c="dimmed" mt={4}>
-          Each rule converts an activity metric into points. Rules for the same sport stack.
-          Changes only apply to activities synced afterwards.
+          Each rule converts an activity metric into points. Changes only apply to activities
+          synced afterwards.
         </Text>
       </div>
 
@@ -194,12 +201,11 @@ export default function Points() {
             </Text>
           )}
         </form>
-        {nudgeStat && (
+        {strandedCount > 0 && (
           <Group gap="xs" mt="sm">
             <Text size="sm" c="yellow.4">
-              {nudgeStat.zeroPoints} past {spaced(nudgeStat.sportType)}{" "}
-              {nudgeStat.zeroPoints === 1 ? "activity" : "activities"} would earn under your
-              current rules.
+              {strandedCount} past {strandedCount === 1 ? "activity" : "activities"} could earn
+              points under your current rules.
             </Text>
             <Button
               size="compact-xs"
